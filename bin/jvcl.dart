@@ -11,18 +11,25 @@ Future<void> main(List<String> args) async {
   final branch = getEnvironment('BRANCH');
   final mode = getEnvironment('MODE');
   final buildName = getEnvironment('BUILD_NAME');
-  var buildId = int.parse(getEnvironment('BUILD_ID'));
+  final buildId = int.parse(getEnvironment('BUILD_ID'));
   final commit = Platform.environment['LAST_BUILD_COMMIT'];
+
+  /// 如果制定上一次提交 则获取上一次提交到最新提交的日志 作为更新日志
+  /// 否则就按照查询打包最近的打包号作为查询的上一次提交节点
   if (commit != null) {
     final log = await loadGitLog(commit, branch);
     await saveLogToFile(log, branch);
   } else {
     final details = <JobDetail>[];
     JobDetail? logDetail;
-    while (buildId > 0) {
-      final detail = await getJobDetail(buildId);
+
+    var requestBuildId = buildId;
+
+    /// 从上一个打包进行查询
+    while (requestBuildId > 1) {
+      requestBuildId -= 1;
+      final detail = await getJobDetail(requestBuildId);
       if (detail.gitCommit.isEmpty || detail.version.isEmpty) {
-        buildId -= 1;
         continue;
       }
       details.add(detail);
@@ -32,24 +39,21 @@ Future<void> main(List<String> args) async {
           Version.parse(buildName) >= Version.parse(detail.version)) {
         logDetail = detail;
         break;
-      } else {
-        buildId -= 1;
       }
     }
 
-    if (logDetail == null) {
-      late int lastLogIndex;
-      final lastSuccessIndex =
-          details.lastIndexWhere((element) => element.isSuccess);
-      if (lastSuccessIndex == -1) {
-        lastLogIndex = details.lastIndexWhere((element) => !element.isSuccess);
-      } else {
-        lastLogIndex = min(details.length - 1, lastSuccessIndex + 1);
-      }
-      logDetail = details[lastLogIndex];
+    if (logDetail != null) {
+      /// 查找到上次成功的节点
+      final log = await loadGitLog(logDetail.gitCommit, branch);
+      await saveLogToFile(log, branch);
+    } else {
+      /// 如果查找不到就获取当前节点的日志
+      final detail = await getJobDetail(buildId);
+      await saveLogToFile('''
+commit ${detail.gitCommit}
+${detail.comments.join('\n')}
+''', branch);
     }
-    final log = logDetail.comments.join("\n");
-    await saveLogToFile(log, branch);
   }
 }
 
@@ -73,10 +77,21 @@ git log $lastBuildCommit..$gitCommit
   }
   var logContent = '';
   for (var element in result.outLines) {
-    if (element.contains('commit')) {
+    if (element.startsWith('commit')) {
+      logContent += '''
+
+$element
+''';
       continue;
     }
-    logContent += element.replaceAll('    ', "");
+    if (element.contains('    ')) {
+      final message = element.replaceAll('    ', "");
+      if (message.isNotEmpty) {
+        logContent += '''
+$message
+''';
+      }
+    }
   }
   return logContent;
 }
@@ -114,6 +129,7 @@ $logContent
 
 Future<JobDetail> getJobDetail(int id) async {
   final url = buildUrl(id);
+  stdout.write('get detail: $url');
   final userName = getEnvironment('JENKINS_USERNAME');
   final password = getEnvironment('JENKINS_PASSWORD');
   final dio = Dio();

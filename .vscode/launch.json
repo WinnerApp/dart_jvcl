@@ -1,0 +1,26 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "dart_jvcl",
+            "request": "launch",
+            "type": "dart",
+            "program": "bin/jvcl.dart",
+            "env": {
+                "BRANCH": "origin/develop",
+                "MODE": "profile",
+                "BUILD_NAME": "0.4.0",
+                "BUILD_ID": "18",
+                "JOB_URL": "http://10.10.49.220:8080/job/guilin_latex_pda/",
+                "JENKINS_USERNAME": "king",
+                "JENKINS_PASSWORD": "kingjenkins",
+                "WORKSPACE": "/Users/king/Documents/guilin_latex_pda",
+                "GIT_COMMIT": "b27f734ac145b63d8684ce3d7709d33519c929f5",
+            }
+            
+        }
+    ]
+}
