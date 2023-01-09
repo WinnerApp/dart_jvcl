@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:math';
 import 'package:darty_json_safe/darty_json_safe.dart';
 import 'package:dio/dio.dart';
 import 'package:process_run/shell.dart';
@@ -113,7 +112,7 @@ $logContent
   }
   final mode = getEnvironment('MODE');
   if (mode == 'release') {
-    logContent = getEnvironment('GIT_LOG');
+    logContent = platformEnvironment['GIT_LOG'] ?? '';
   }
   print('''
 当前日志:
