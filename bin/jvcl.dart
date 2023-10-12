@@ -123,7 +123,14 @@ $logContent
   if (await logFile.exists()) {
     await logFile.delete();
   }
-  await logFile.writeAsString(logContent);
+  final logs = [];
+  for (var log in logContent.split("\n")) {
+    if (log.startsWith('代码分支: ')) continue;
+    if (log.startsWith('commit')) continue;
+    if (log.startsWith('Merge branch')) continue;
+    logs.add(log);
+  }
+  await logFile.writeAsString(logs.join('\n'));
 }
 
 Future<JobDetail> getJobDetail(int id) async {
